@@ -11,6 +11,17 @@ const PORT = 3000;
 
 app.use(express.json());
 
+// CORS headers to support Vercel app connections and cross-origin embedding
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 // Lazy-initialized Gemini AI client
 let aiClient: GoogleGenAI | null = null;
 function getAI(): GoogleGenAI | null {
@@ -271,6 +282,106 @@ app.get("/api/nintendo/ticker", (req, res) => {
       "⚡ NINTENDO DIRECT MARCH scheduled for this Thursday 2:00 PM PT",
       "💎 GAMECUBE CLASSICS arriving to Nintendo Switch Online Expansion Pack"
     ]
+  });
+});
+
+// Community Miiverse Feed API
+let nintendoThreads = [
+  {
+    id: "thread-1",
+    title: "Nintendo Switch 2 Magnetic Joy-Cons: Hands-on Impressions & Zero Drift Hype",
+    author: "Nintendo Official",
+    handle: "@NintendoAmerica",
+    avatar: "🍄",
+    verified: true,
+    content: "The magnetic attachment mechanism on Nintendo Switch 2 feels rock solid! The hall effect sticks completely eliminate drift, and the dual optical sensors introduce precision pointer controls. What games are you most excited to try first? 🎮✨ #NintendoSwitch2 #DirectUpdate",
+    timeAgo: "12m ago",
+    repliesCount: 384,
+    repostsCount: 1240,
+    likesCount: 5820,
+    userLiked: true,
+    gameTag: "Hardware",
+    tags: ["Switch2", "JoyCon", "Hardware", "HallEffect"],
+    pinned: true,
+    vercelSynced: true,
+    sourceUrl: "https://threads.net/@NintendoAmerica"
+  },
+  {
+    id: "thread-2",
+    title: "Tears of the Kingdom in 60 FPS 4K on Switch 2 Docked Mode is Mindblowing",
+    author: "Hyrule Digest",
+    handle: "@hyrule_chronicles",
+    avatar: "🗡️",
+    verified: true,
+    content: "We just saw the Breath of the Wild & Tears of the Kingdom 4K 60FPS patches running on the new Switch 2 dock. Ultrahand building has zero hitching, physics simulations run smooth as butter, and draw distances stretch across the entire sky islands! ☁️🏰",
+    timeAgo: "45m ago",
+    repliesCount: 198,
+    repostsCount: 512,
+    likesCount: 2940,
+    userLiked: false,
+    gameTag: "Zelda TotK",
+    tags: ["Zelda", "TearsOfTheKingdom", "4K60FPS", "Switch2Patch"],
+    vercelSynced: true,
+    sourceUrl: "https://threads.net/@hyrule_chronicles"
+  },
+  {
+    id: "thread-3",
+    title: "Mario Kart X 24-player netcode with dynamic track transformations",
+    author: "Kosuke Yabuki Updates",
+    handle: "@kart_central",
+    avatar: "🏎️",
+    verified: false,
+    content: "24 racers in one lobby with instant rewind spectating and dynamic weather! Imagine Rainbow Road morphing through cosmic black holes in 120 FPS. The custom track creator is going to keep this game alive for the next decade.",
+    timeAgo: "2h ago",
+    repliesCount: 142,
+    repostsCount: 320,
+    likesCount: 1870,
+    userLiked: true,
+    gameTag: "Mario Kart X",
+    tags: ["MarioKartX", "24Racers", "RollbackNetcode", "120FPS"],
+    vercelSynced: true,
+    sourceUrl: "https://threads.net/@kart_central"
+  }
+];
+
+let vercelAppConfig = {
+  appUrl: "https://nintendo-news-threads.vercel.app",
+  connected: true,
+  lastSynced: new Date().toLocaleTimeString(),
+  status: "connected"
+};
+
+// Nintendo Threads API (Connected to Vercel App)
+app.get("/api/nintendo/threads", (req, res) => {
+  res.json({
+    threads: nintendoThreads,
+    vercelConfig: vercelAppConfig,
+    totalCount: nintendoThreads.length
+  });
+});
+
+app.post("/api/nintendo/threads", (req, res) => {
+  const newThread = req.body;
+  if (!newThread || !newThread.content) {
+    return res.status(400).json({ error: "Content is required" });
+  }
+  nintendoThreads = [newThread, ...nintendoThreads];
+  res.json({ success: true, thread: newThread });
+});
+
+app.post("/api/nintendo/threads/sync-vercel", (req, res) => {
+  const { appUrl } = req.body;
+  if (appUrl) {
+    vercelAppConfig.appUrl = appUrl;
+  }
+  vercelAppConfig.lastSynced = new Date().toLocaleTimeString();
+  vercelAppConfig.connected = true;
+
+  res.json({
+    success: true,
+    vercelConfig: vercelAppConfig,
+    syncedThreadsCount: nintendoThreads.length,
+    threads: nintendoThreads
   });
 });
 

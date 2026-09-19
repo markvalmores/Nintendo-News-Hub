@@ -101,6 +101,18 @@ export const NewsReaderModal: React.FC<NewsReaderModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            <a
+              href={`https://threads.net/intent/post?text=${encodeURIComponent(`Check out this Nintendo Switch 2 update: "${article.title}" - Read on Nintendo News Hub!`)}`}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => soundEngine.playMenuBlip(40)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-neutral-800 hover:bg-neutral-700 text-cyan-300 border border-neutral-700 transition-all hover:scale-105"
+              title="Share to Threads & Vercel App"
+            >
+              <Share2 className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden sm:inline">Threads</span>
+            </a>
+
             <button
               id="reader-like-button"
               onClick={handleLike}

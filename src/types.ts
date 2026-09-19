@@ -75,3 +75,31 @@ export interface DisplaySettings {
   aspectRatio: 'auto' | 'widescreen' | 'phone' | 'ultra';
   rotation: number; // 0, 90, 180, 270 degrees
 }
+
+export interface NintendoThread {
+  id: string;
+  title: string;
+  author: string;
+  handle: string;
+  avatar: string;
+  verified: boolean;
+  content: string;
+  timeAgo: string;
+  repliesCount: number;
+  repostsCount: number;
+  likesCount: number;
+  userLiked?: boolean;
+  gameTag: string;
+  tags: string[];
+  pinned?: boolean;
+  vercelSynced?: boolean;
+  sourceUrl?: string;
+}
+
+export interface VercelConnectionConfig {
+  appUrl: string;
+  connected: boolean;
+  lastSynced: string | null;
+  status: 'connected' | 'syncing' | 'offline' | 'custom';
+}
+

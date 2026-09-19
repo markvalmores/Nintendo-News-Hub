@@ -4,6 +4,8 @@ import { soundEngine } from "../utils/audio";
 import { CrtOverlay } from "./CrtOverlay";
 import { NewsReaderModal } from "./NewsReaderModal";
 import { CommunityWall } from "./CommunityWall";
+import { NintendoThreadsFeed } from "./NintendoThreadsFeed";
+import { INITIAL_NINTENDO_NEWS, INITIAL_BREAKING_TICKER } from "../data/nintendoNewsData";
 import { 
   Wifi, 
   Battery, 
@@ -25,7 +27,9 @@ import {
   Compass, 
   RotateCw, 
   Gamepad2, 
-  Sliders
+  Sliders,
+  RefreshCw,
+  Link2
 } from "lucide-react";
 import confetti from "canvas-confetti";
 
@@ -48,42 +52,60 @@ export const NintendoNewsApp: React.FC<NintendoNewsAppProps> = ({
   onUpdateDisplaySettings,
   gamepadAction,
 }) => {
-  const [articles, setArticles] = useState<NewsArticle[]>([]);
-  const [categories, setCategories] = useState<string[]>(["All", "Hardware", "First Party", "Direct Highlights", "eShop Deals", "System & Retro", "Miiverse"]);
+  const [articles, setArticles] = useState<NewsArticle[]>(INITIAL_NINTENDO_NEWS);
+  const [categories, setCategories] = useState<string[]>([
+    "All", 
+    "Hardware", 
+    "First Party", 
+    "Direct Highlights", 
+    "eShop Deals", 
+    "System & Retro", 
+    "Threads (Vercel)", 
+    "Miiverse"
+  ]);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeArticle, setActiveArticle] = useState<NewsArticle | null>(null);
-  const [tickerItems, setTickerItems] = useState<string[]>([]);
+  const [tickerItems, setTickerItems] = useState<string[]>(INITIAL_BREAKING_TICKER);
   const [tickerIndex, setTickerIndex] = useState(0);
   const [currentTime, setCurrentTime] = useState("");
   const [selectedAvatar, setSelectedAvatar] = useState("🍄");
   const [focusedCardIndex, setFocusedCardIndex] = useState(0);
 
-  // Fetch News and Ticker from backend API
+  // Fetch News and Ticker from backend API with robust fallback
   const fetchNews = async () => {
     try {
       const res = await fetch("/api/nintendo/news");
-      const data = await res.json();
-      if (data.articles) {
-        setArticles(data.articles);
-      }
-      if (data.categories) {
-        setCategories([...data.categories, "Miiverse"]);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.articles && data.articles.length > 0) {
+          setArticles(data.articles);
+        }
+        if (data.categories) {
+          const uniqueCats = Array.from(new Set([
+            ...data.categories, 
+            "Threads (Vercel)", 
+            "Miiverse"
+          ]));
+          setCategories(uniqueCats);
+        }
       }
     } catch (e) {
-      console.error("Failed to fetch news", e);
+      console.warn("Using active Nintendo news dataset", e);
     }
   };
 
   const fetchTicker = async () => {
     try {
       const res = await fetch("/api/nintendo/ticker");
-      const data = await res.json();
-      if (data.breaking) {
-        setTickerItems(data.breaking);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.breaking && data.breaking.length > 0) {
+          setTickerItems(data.breaking);
+        }
       }
     } catch {
-      // fallback
+      // keep INITIAL_BREAKING_TICKER fallback
     }
   };
 
@@ -157,7 +179,7 @@ export const NintendoNewsApp: React.FC<NintendoNewsAppProps> = ({
 
   // Filtered Articles
   const filteredArticles = useMemo(() => {
-    if (selectedCategory === "Miiverse") return [];
+    if (selectedCategory === "Miiverse" || selectedCategory === "Threads (Vercel)") return [];
     return articles.filter(article => {
       const matchCat = selectedCategory === "All" || article.category.toLowerCase() === selectedCategory.toLowerCase();
       const matchSearch = !searchQuery || 
@@ -283,6 +305,23 @@ export const NintendoNewsApp: React.FC<NintendoNewsAppProps> = ({
             </button>
           </div>
 
+          {/* Threads & Vercel Quick Pill */}
+          <button
+            onClick={() => {
+              soundEngine.playMenuBlip(50);
+              setSelectedCategory("Threads (Vercel)");
+            }}
+            className={`px-2.5 py-1 rounded-md text-[11px] font-bold flex items-center gap-1.5 transition-all border ${
+              selectedCategory === "Threads (Vercel)"
+                ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-sm"
+                : "bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-white"
+            }`}
+            title="Nintendo Threads Feed (Connected to Vercel App)"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+            <span className="font-mono">Threads</span>
+          </button>
+
           {/* Audio & Music Buttons */}
           <button
             onClick={() => {
@@ -388,19 +427,30 @@ export const NintendoNewsApp: React.FC<NintendoNewsAppProps> = ({
                 soundEngine.playMenuBlip(40);
                 setSelectedCategory(cat);
               }}
-              className={`px-3 py-1 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
+              className={`px-3 py-1 rounded-full text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
                 selectedCategory === cat
                   ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-md shadow-red-600/30 scale-105"
                   : "bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-neutral-200 border border-neutral-800"
               }`}
             >
-              {cat === "Miiverse" ? "🌐 Miiverse Plaza" : cat}
+              {cat === "Threads (Vercel)" ? (
+                <>
+                  <svg viewBox="0 0 1155 1000" className="w-2.5 h-2.5 fill-current">
+                    <path d="m577.3 0 577.4 1000H0z" />
+                  </svg>
+                  <span>Threads (Vercel)</span>
+                </>
+              ) : cat === "Miiverse" ? (
+                <span>🌐 Miiverse Plaza</span>
+              ) : (
+                cat
+              )}
             </button>
           ))}
         </div>
 
         {/* Search Input */}
-        {selectedCategory !== "Miiverse" && (
+        {selectedCategory !== "Miiverse" && selectedCategory !== "Threads (Vercel)" && (
           <div className="relative w-full sm:w-60">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
             <input 
@@ -416,7 +466,9 @@ export const NintendoNewsApp: React.FC<NintendoNewsAppProps> = ({
 
       {/* 4. MAIN SCREEN CONTENT AREA */}
       <main className="relative z-10 flex-1 overflow-y-auto p-3 sm:p-5 space-y-4">
-        {selectedCategory === "Miiverse" ? (
+        {selectedCategory === "Threads (Vercel)" ? (
+          <NintendoThreadsFeed />
+        ) : selectedCategory === "Miiverse" ? (
           <CommunityWall />
         ) : (
           <>
@@ -540,17 +592,22 @@ export const NintendoNewsApp: React.FC<NintendoNewsAppProps> = ({
             </div>
 
             {filteredArticles.length === 0 && (
-              <div className="py-12 text-center text-neutral-400 space-y-2">
+              <div className="py-12 text-center text-neutral-400 space-y-3">
                 <p className="text-sm">No Nintendo news found matching your filter criteria.</p>
-                <button
-                  onClick={() => {
-                    setSelectedCategory("All");
-                    setSearchQuery("");
-                  }}
-                  className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-bold"
-                >
-                  Reset Filter (Y)
-                </button>
+                <div className="flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => {
+                      soundEngine.playMenuBlip(40);
+                      setSelectedCategory("All");
+                      setSearchQuery("");
+                      setArticles(INITIAL_NINTENDO_NEWS);
+                    }}
+                    className="px-4 py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-lg text-xs font-bold shadow-lg transition-all flex items-center gap-2"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Reset Filter & Load All Nintendo News</span>
+                  </button>
+                </div>
               </div>
             )}
           </>
