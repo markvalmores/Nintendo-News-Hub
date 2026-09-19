@@ -1,0 +1,6 @@
+{
+  "name": "Nintendo Switch 2 News Hub",
+  "description": "Interactive 3D Switch 2 mesh console featuring layered Nintendo News OS, Handheld/Docked/Detached modes, Gamepad and Joy-Con support, SFX/VFX, and live community feeds.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
